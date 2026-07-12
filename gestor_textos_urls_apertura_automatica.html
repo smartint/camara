@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Gestor de textos y URL</title>
+<style>
+:root{
+  --bg:#f4f7fb;--panel:#fff;--text:#172033;--muted:#667085;--primary:#2563eb;
+  --primary2:#1d4ed8;--danger:#dc2626;--ok:#15803d;--line:#d8e0ec;
+  --shadow:0 10px 28px rgba(15,23,42,.08);--radius:18px
+}
+*{box-sizing:border-box}
+html,body{width:100%;min-height:100%;overflow-x:hidden}
+body{
+  margin:0;
+  min-height:100vh;
+  min-height:100dvh;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+}
+header{
+  flex:0 0 auto;
+  background:linear-gradient(135deg,#163a70,#2563eb);
+  color:#fff;
+  padding:calc(14px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 14px max(14px,env(safe-area-inset-left));
+  box-shadow:var(--shadow)
+}
+.header-inner{width:min(100%,1440px);margin:auto}
+h1{margin:0;font-size:clamp(1.25rem,2.6vw,2.2rem)}
+.subtitle{margin-top:6px;opacity:.9;font-size:clamp(.86rem,1.6vw,1rem)}
+main{
+  flex:1 1 auto;
+  width:min(100%,1440px);
+  margin:0 auto;
+  padding:clamp(12px,2vw,22px) max(10px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
+}
+.grid{
+  min-height:100%;
+  display:grid;
+  grid-template-columns:minmax(300px,.9fr) minmax(360px,1.1fr);
+  gap:clamp(12px,1.8vw,20px);
+  align-items:start;
+}
+@media(max-width:980px){.grid{grid-template-columns:1fr}}
+@media(min-width:981px){
+  .grid{height:calc(100dvh - 150px)}
+  .card{max-height:100%;overflow:auto}
+}
+@media(max-width:600px){
+  main{padding-top:10px}
+  .card{padding:12px;border-radius:14px}
+  .controls,.toolbar{gap:6px}
+  button,.button{flex:1 1 auto;min-height:44px}
+  .toolbar .grow{flex:1 0 100%;min-width:0}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+.card h2{margin-top:0}
+.video-wrap{
+  position:relative;
+  width:100%;
+  aspect-ratio:4/3;
+  min-height:220px;
+  max-height:min(48dvh,520px);
+  background:#111827;
+  border-radius:16px;
+  overflow:hidden
+}
+video{width:100%;height:100%;object-fit:cover}
+@media(max-width:600px){
+  .video-wrap{aspect-ratio:auto;height:min(42dvh,360px);min-height:210px}
+}
+.scan-frame{position:absolute;inset:14%;border:3px dashed rgba(255,255,255,.88);border-radius:14px;pointer-events:none}
+.scan-label{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(0,0,0,.62);color:white;padding:6px 10px;border-radius:999px;font-size:.82rem}
+canvas{display:none}
+.controls,.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.controls{margin-top:12px}
+.toolbar{margin-bottom:12px}
+button,.button{border:0;border-radius:12px;padding:10px 14px;font-weight:750;cursor:pointer;font-size:.94rem}
+button:disabled{opacity:.5;cursor:not-allowed}
+.primary{background:var(--primary);color:#fff}.primary:hover{background:var(--primary2)}
+.secondary{background:#e7eefc;color:#1e40af}.neutral{background:#eef2f7;color:#344054}
+.success{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}
+label{display:block;font-weight:750;margin:12px 0 6px}
+textarea,input[type="url"],input[type="search"]{
+ width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:11px 12px;font:inherit;font-size:16px;color:var(--text);background:#fff
+}
+textarea{min-height:135px;resize:vertical}
+.help{font-size:.88rem;color:var(--muted);line-height:1.45}
+.status{display:none;margin-top:12px;padding:10px 12px;border-radius:12px;background:#eef2ff;color:#3730a3}
+.status.show{display:block}.status.ok{background:#dcfce7;color:#166534}.status.error{background:#fee2e2;color:#991b1b}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:9px;display:none}
+.progress span{display:block;height:100%;width:0;background:#2563eb;transition:width .2s}
+.counter{display:inline-flex;padding:7px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-weight:750;font-size:.9rem}
+.grow{flex:1;min-width:190px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}
+table{width:100%;border-collapse:collapse;min-width:760px}
+th,td{padding:11px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:#f8fafc;position:sticky;top:0}
+td.text-cell{white-space:pre-wrap;max-width:420px}
+.url-link{word-break:break-all}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}.row-actions button{padding:7px 10px;font-size:.82rem}
+.empty{text-align:center;color:var(--muted);padding:28px}
+.generate-box{margin-top:18px;padding:16px;border:2px dashed #93c5fd;border-radius:16px;background:#eff6ff}
+.generate-box h3{margin:0 0 6px;color:#1e3a8a}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.58);display:none;align-items:center;justify-content:center;padding:16px;z-index:100}
+.modal.show{display:flex}
+.modal-box{background:#fff;width:min(720px,100%);max-height:90vh;overflow:auto;border-radius:18px;padding:18px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}
+footer{
+  flex:0 0 auto;
+  text-align:center;
+  color:var(--muted);
+  font-size:.83rem;
+  padding:12px max(10px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))
+}
+
+@media (max-width: 700px) and (orientation: portrait){
+  html,body{
+    width:100%;
+    max-width:100%;
+    overflow-x:hidden;
+  }
+  body{
+    display:block;
+    min-height:100dvh;
+  }
+  header{
+    position:relative;
+    width:100%;
+    padding:calc(10px + env(safe-area-inset-top)) 10px 10px;
+  }
+  .header-inner{
+    width:100%;
+    max-width:none;
+  }
+  h1{
+    font-size:1.18rem;
+    line-height:1.2;
+  }
+  .subtitle{
+    font-size:.82rem;
+    line-height:1.3;
+  }
+  main{
+    display:block;
+    width:100%;
+    max-width:none;
+    margin:0;
+    padding:8px 8px calc(18px + env(safe-area-inset-bottom));
+  }
+  .grid{
+    display:block;
+    width:100%;
+    min-height:0;
+    height:auto;
+  }
+  .card{
+    width:100%;
+    max-width:none;
+    max-height:none;
+    overflow:visible;
+    margin:0 0 10px;
+    padding:10px;
+    border-radius:12px;
+  }
+  .card h2{
+    font-size:1.05rem;
+    margin-bottom:10px;
+  }
+  .video-wrap{
+    width:100%;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    aspect-ratio:3/4;
+    border-radius:12px;
+  }
+  video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+  .scan-frame{
+    inset:10%;
+  }
+  .controls,
+  .toolbar{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:7px;
+    width:100%;
+  }
+  .controls button,
+  .toolbar button,
+  .toolbar .button{
+    width:100%;
+    min-width:0;
+    min-height:46px;
+    margin:0;
+  }
+  .toolbar .grow{
+    width:100%;
+    min-width:0;
+  }
+  textarea,
+  input[type="url"],
+  input[type="search"],
+  select{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    font-size:16px;
+  }
+  textarea{
+    min-height:120px;
+  }
+  .table-wrap{
+    border:0;
+    overflow:visible;
+  }
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td{
+    display:block;
+    width:100%;
+  }
+  table{
+    min-width:0;
+  }
+  thead{
+    display:none;
+  }
+  tbody{
+    display:grid;
+    gap:9px;
+  }
+  tr{
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fff;
+    padding:10px;
+    box-shadow:0 4px 14px rgba(15,23,42,.05);
+  }
+  td{
+    border:0;
+    padding:5px 0;
+    max-width:none;
+    word-break:break-word;
+  }
+  td:first-child{
+    font-weight:800;
+    color:var(--primary);
+  }
+  td.text-cell{
+    max-width:none;
+    white-space:pre-wrap;
+  }
+  .url-link{
+    display:block;
+    word-break:break-all;
+  }
+  .row-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:7px;
+    margin-top:6px;
+  }
+  .row-actions button{
+    width:100%;
+    min-height:42px;
+  }
+  .generate-box{
+    margin-top:12px;
+    padding:12px;
+  }
+  .generate-box button{
+    width:100%;
+    min-height:48px;
+  }
+  footer{
+    width:100%;
+    padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+    font-size:.76rem;
+  }
+}
+
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <h1>Gestor de textos y URL</h1>
+    <div class="subtitle">Captura textos, asígnales una dirección web y genera una app lectora independiente.</div>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+    <section class="card">
+      <h2>1. Capturar texto</h2>
+      <div class="video-wrap">
+        <video id="video" playsinline muted></video>
+        <div class="scan-frame"></div>
+        <div class="scan-label">Sitúa el texto dentro del recuadro</div>
+      </div>
+      <canvas id="canvas"></canvas>
+
+      <div class="controls">
+        <button id="startCamera" class="primary">Activar cámara</button>
+        <button id="captureText" class="secondary" disabled>Capturar y reconocer</button>
+        <button id="stopCamera" class="neutral" disabled>Detener cámara</button>
+      </div>
+
+      <div id="status" class="status"></div>
+      <div id="progress" class="progress"><span></span></div>
+
+      <label for="recognizedText">Texto reconocido</label>
+      <textarea id="recognizedText" placeholder="El texto aparecerá aquí. También puedes escribirlo o corregirlo manualmente."></textarea>
+
+      <label for="url">URL asociada</label>
+      <input id="url" type="url" placeholder="https://ejemplo.com/recurso">
+
+      <div class="controls">
+        <button id="saveRecord" class="success">Guardar registro</button>
+        <button id="clearForm" class="neutral">Limpiar formulario</button>
+      </div>
+
+      <p class="help">La cámara funciona en páginas HTTPS o en localhost. El OCR necesita conexión a Internet para cargar el motor de reconocimiento.</p>
+    </section>
+
+    <section class="card">
+      <h2>2. Base de textos <span id="recordCount" class="counter">0 registros</span></h2>
+
+      <div class="toolbar">
+        <input id="search" class="grow" type="search" placeholder="Buscar por texto o URL">
+        <button id="exportCsv" class="secondary">Exportar CSV</button>
+        <label for="importCsv" class="button secondary" style="margin:0">Importar CSV</label>
+        <input id="importCsv" type="file" accept=".csv,text/csv" hidden>
+        <button id="clearAll" class="danger">Borrar todo</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Texto</th><th>URL</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="recordsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="generate-box">
+        <h3>3. Generar la segunda app</h3>
+        <p class="help">Se descargará una aplicación HTML independiente que contendrá todos los textos y URL guardados. Esa segunda app solo servirá para enfocar textos con la cámara y mostrar el enlace asociado.</p>
+        <button id="generateReaderApp" class="primary">Generar app lectora autónoma</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="editModal" class="modal">
+  <div class="modal-box">
+    <h2>Editar registro</h2>
+    <input id="editId" type="hidden">
+    <label for="editText">Texto</label>
+    <textarea id="editText"></textarea>
+    <label for="editUrl">URL</label>
+    <input id="editUrl" type="url">
+    <div class="modal-actions">
+      <button id="cancelEdit" class="neutral">Cancelar</button>
+      <button id="confirmEdit" class="primary">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<footer>Los registros se guardan localmente en este navegador.</footer>
+
+<script>
+const STORAGE_KEY='gestor_textos_url_v2';
+let records=loadRecords();
+let cameraStream=null;
+let ocrBusy=false;
+const $=id=>document.getElementById(id);
+
+function loadRecords(){
+  try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]}catch(e){return[]}
+}
+function persist(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+  renderRecords();
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function escapeHtml(s=''){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function normalizeText(s=''){
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9ñü\s]/gi,' ').replace(/\s+/g,' ').trim();
+}
+function validUrl(value){
+  try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)}catch(e){return false}
+}
+function setStatus(msg,type=''){
+  const el=$('status');el.textContent=msg;el.className='status show '+type;
+}
+function hideStatus(){$('status').className='status';$('status').textContent=''}
+function setProgress(pct){
+  const el=$('progress');el.style.display=pct===null?'none':'block';
+  el.querySelector('span').style.width=(pct||0)+'%';
+}
+function countLabel(n){return `${n} ${n===1?'registro':'registros'}`}
+function download(content,name,type){
+  const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+async function startCamera(){
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Este navegador no permite utilizar la cámara.');
+  cameraStream=await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false
+  });
+  $('video').srcObject=cameraStream;
+  await $('video').play();
+}
+function stopCamera(){
+  if(cameraStream)cameraStream.getTracks().forEach(t=>t.stop());
+  cameraStream=null;$('video').srcObject=null;
+}
+function captureFrame(){
+  const video=$('video'),canvas=$('canvas');
+  if(!video.videoWidth)throw new Error('La cámara todavía no está preparada.');
+  const w=video.videoWidth,h=video.videoHeight,sx=w*.1,sy=h*.14,sw=w*.8,sh=h*.72;
+  const scale=Math.min(1,1600/sw);
+  canvas.width=Math.round(sw*scale);canvas.height=Math.round(sh*scale);
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(video,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
+  const img=ctx.getImageData(0,0,canvas.width,canvas.height),d=img.data;
+  for(let i=0;i<d.length;i+=4){
+    const g=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+    const v=Math.max(0,Math.min(255,(g-128)*1.35+128));
+    d[i]=d[i+1]=d[i+2]=v;
+  }
+  ctx.putImageData(img,0,0);
+  return canvas;
+}
+async function ensureTesseract(){
+  if(window.Tesseract)return;
+  await new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload=resolve;s.onerror=()=>reject(new Error('No se pudo cargar el motor OCR.'));
+    document.head.appendChild(s);
+  });
+}
+async function recognizeText(){
+  if(ocrBusy)throw new Error('Ya hay un reconocimiento en curso.');
+  ocrBusy=true;setProgress(1);
+  try{
+    await ensureTesseract();
+    const result=await Tesseract.recognize(captureFrame(),'spa+eng',{
+      logger:m=>{
+        if(m.status==='recognizing text'){
+          const p=Math.round((m.progress||0)*100);setProgress(p);setStatus(`Reconociendo texto… ${p}%`);
+        }else if(m.status)setStatus('Preparando reconocimiento…');
+      }
+    });
+    return (result.data.text||'').replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  }finally{ocrBusy=false;setTimeout(()=>setProgress(null),500)}
+}
+
+$('startCamera').onclick=async()=>{
+  try{
+    await startCamera();
+    $('startCamera').disabled=true;$('captureText').disabled=false;$('stopCamera').disabled=false;
+    setStatus('Cámara activada. Coloca el texto dentro del recuadro.','ok');
+  }catch(e){setStatus(e.message,'error')}
+};
+$('stopCamera').onclick=()=>{
+  stopCamera();
+  $('startCamera').disabled=false;$('captureText').disabled=true;$('stopCamera').disabled=true;
+  setStatus('Cámara detenida.');
+};
+$('captureText').onclick=async()=>{
+  try{
+    const text=await recognizeText();
+    $('recognizedText').value=text;
+    setStatus(text?'Texto reconocido. Revísalo antes de guardarlo.':'No se ha detectado texto. Intenta mejorar la iluminación.',text?'ok':'error');
+  }catch(e){setStatus(e.message,'error')}
+};
+$('saveRecord').onclick=()=>{
+  const text=$('recognizedText').value.trim(),url=$('url').value.trim();
+  if(!text)return setStatus('Es necesario introducir o reconocer un texto.','error');
+  if(!validUrl(url))return setStatus('Introduce una URL válida que comience por http:// o https://','error');
+  records.push({id:uid(),text,url,createdAt:new Date().toISOString()});
+  persist();$('recognizedText').value='';$('url').value='';
+  setStatus('Registro guardado correctamente.','ok');
+};
+$('clearForm').onclick=()=>{$('recognizedText').value='';$('url').value='';hideStatus()};
+
+function renderRecords(){
+  const q=normalizeText($('search').value||'');
+  const filtered=records.filter(r=>!q||normalizeText(r.text+' '+r.url).includes(q));
+  $('recordCount').textContent=countLabel(records.length);
+  const body=$('recordsBody');
+  if(!filtered.length){
+    body.innerHTML=`<tr><td colspan="4" class="empty">${records.length?'No hay coincidencias.':'Todavía no hay registros guardados.'}</td></tr>`;
+    return;
+  }
+  body.innerHTML=filtered.map((r,i)=>`<tr>
+    <td>${i+1}</td>
+    <td class="text-cell">${escapeHtml(r.text)}</td>
+    <td><a class="url-link" href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.url)}</a></td>
+    <td><div class="row-actions">
+      <button class="secondary" onclick="openEdit('${r.id}')">Editar</button>
+      <button class="danger" onclick="deleteRecord('${r.id}')">Borrar</button>
+    </div></td>
+  </tr>`).join('');
+}
+$('search').oninput=renderRecords;
+
+window.openEdit=id=>{
+  const r=records.find(x=>x.id===id);if(!r)return;
+  $('editId').value=id;$('editText').value=r.text;$('editUrl').value=r.url;
+  $('editModal').classList.add('show');
+};
+window.deleteRecord=id=>{
+  if(confirm('¿Quieres borrar este registro?')){records=records.filter(x=>x.id!==id);persist()}
+};
+$('cancelEdit').onclick=()=>$('editModal').classList.remove('show');
+$('confirmEdit').onclick=()=>{
+  const id=$('editId').value,text=$('editText').value.trim(),url=$('editUrl').value.trim();
+  if(!text)return alert('El texto no puede quedar vacío.');
+  if(!validUrl(url))return alert('La URL no es válida.');
+  const r=records.find(x=>x.id===id);
+  if(r){r.text=text;r.url=url;r.updatedAt=new Date().toISOString();persist()}
+  $('editModal').classList.remove('show');
+};
+$('editModal').onclick=e=>{if(e.target===$('editModal'))$('editModal').classList.remove('show')};
+
+$('clearAll').onclick=()=>{
+  if(records.length&&confirm('¿Quieres borrar todos los registros?')){records=[];persist()}
+};
+
+function csvEscape(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+$('exportCsv').onclick=()=>{
+  if(!records.length)return alert('No hay registros para exportar.');
+  const rows=[['id','texto','url','fecha'],...records.map(r=>[r.id,r.text,r.url,r.createdAt||''])];
+  const csv='\uFEFF'+rows.map(row=>row.map(csvEscape).join(';')).join('\r\n');
+  download(csv,'base_textos_urls.csv','text/csv;charset=utf-8');
+};
+
+function parseCSV(text){
+  const rows=[];let row=[],cell='',quoted=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i],n=text[i+1];
+    if(c==='"'&&quoted&&n==='"'){cell+='"';i++}
+    else if(c==='"'){quoted=!quoted}
+    else if((c===';'||c===',')&&!quoted){row.push(cell);cell=''}
+    else if((c==='\n'||c==='\r')&&!quoted){
+      if(c==='\r'&&n==='\n')i++;
+      row.push(cell);if(row.some(x=>x.trim()!==''))rows.push(row);row=[];cell='';
+    }else cell+=c;
+  }
+  row.push(cell);if(row.some(x=>x.trim()!==''))rows.push(row);
+  return rows;
+}
+$('importCsv').onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{
+    const rows=parseCSV((await file.text()).replace(/^\uFEFF/,''));
+    if(rows.length<2)throw new Error('El archivo no contiene registros.');
+    const head=rows[0].map(normalizeText);
+    const ti=head.findIndex(x=>x==='texto'||x==='text');
+    const ui=head.findIndex(x=>x==='url'||x==='enlace');
+    const ii=head.findIndex(x=>x==='id');
+    if(ti<0||ui<0)throw new Error('El CSV debe contener las columnas texto y url.');
+    const imported=rows.slice(1).map(row=>({
+      id:(ii>=0&&row[ii])||uid(),text:(row[ti]||'').trim(),url:(row[ui]||'').trim(),createdAt:new Date().toISOString()
+    })).filter(r=>r.text&&validUrl(r.url));
+    if(!imported.length)throw new Error('No se encontraron registros válidos.');
+    const replace=confirm(`Se han encontrado ${imported.length} registros.\n\nAceptar: sustituir la base actual.\nCancelar: añadirlos.`);
+    records=replace?imported:[...records,...imported];persist();
+    alert('Importación completada.');
+  }catch(err){alert('No se pudo importar: '+err.message)}
+  e.target.value='';
+};
+
+function buildReaderApp(data){
+  const embedded=JSON.stringify(data).replace(/</g,'\\u003c').replace(/-->/g,'--\\>');
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Lector de textos y URL</title>
+<style>
+:root{--bg:#f3f6fb;--panel:#fff;--text:#172033;--muted:#667085;--primary:#2563eb;--line:#d9e1ee;--ok:#15803d;--warn:#b45309}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#153e75,#2563eb);color:#fff;padding:20px 16px;text-align:center}
+main{max-width:980px;margin:20px auto;padding:0 14px 40px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(31,41,55,.09)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.video-wrap{
+  position:relative;
+  width:100%;
+  aspect-ratio:4/3;
+  min-height:220px;
+  max-height:min(48dvh,520px);
+  background:#111827;
+  border-radius:16px;
+  overflow:hidden
+}
+video{width:100%;height:100%;object-fit:cover}
+@media(max-width:600px){
+  .video-wrap{aspect-ratio:auto;height:min(42dvh,360px);min-height:210px}
+}.frame{position:absolute;inset:14%;border:3px dashed rgba(255,255,255,.85);border-radius:14px}
+.label{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.62);color:white;padding:6px 10px;border-radius:999px;font-size:.82rem}
+button{border:0;border-radius:12px;padding:10px 14px;font-weight:750;cursor:pointer}.primary{background:#2563eb;color:#fff}.secondary{background:#e8eefb;color:#1e40af}.neutral{background:#eef2f7;color:#344054}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.status{display:none;margin-top:12px;padding:10px 12px;border-radius:12px}.status.show{display:block}.status.ok{background:#dcfce7;color:#166534}.status.error{background:#fee2e2;color:#991b1b}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:9px;display:none}.progress span{display:block;height:100%;width:0;background:#2563eb}
+.result{min-height:190px;display:flex;align-items:center;justify-content:center;text-align:center;border:2px dashed #cbd5e1;border-radius:16px;padding:18px}.result.found{border-color:#22c55e;background:#f0fdf4}.result.notfound{border-color:#f59e0b;background:#fffbeb}
+.result a{display:inline-block;margin-top:12px;background:#2563eb;color:#fff;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800;word-break:break-all}
+textarea,select{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:11px 12px;font:inherit;font-size:16px}textarea{min-height:120px;resize:vertical}
+label{display:block;font-weight:750;margin:12px 0 6px}.help{font-size:.88rem;color:var(--muted);line-height:1.45}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:.8rem;font-weight:750}
+canvas{display:none}footer{
+  flex:0 0 auto;
+  text-align:center;
+  color:var(--muted);
+  font-size:.83rem;
+  padding:12px max(10px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))
+}
+
+@media (max-width: 700px) and (orientation: portrait){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  body{display:block;min-height:100dvh}
+  header{
+    width:100%;
+    padding:calc(10px + env(safe-area-inset-top)) 10px 10px;
+  }
+  header h1{font-size:1.18rem;line-height:1.2}
+  main{
+    display:block;
+    width:100%;
+    max-width:none;
+    margin:0;
+    padding:8px 8px calc(18px + env(safe-area-inset-bottom));
+  }
+  .grid{display:block;width:100%;height:auto;min-height:0}
+  .card{
+    width:100%;
+    max-width:none;
+    max-height:none;
+    overflow:visible;
+    margin:0 0 10px;
+    padding:10px;
+    border-radius:12px;
+  }
+  .card h2{font-size:1.05rem}
+  .video-wrap{
+    width:100%;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    aspect-ratio:3/4;
+    border-radius:12px;
+  }
+  .frame{inset:10%}
+  .controls{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:7px;
+    width:100%;
+  }
+  .controls button{
+    width:100%;
+    min-height:46px;
+  }
+  textarea,select{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    font-size:16px;
+  }
+  textarea{min-height:120px}
+  .result{
+    min-height:150px;
+    padding:14px;
+  }
+  .result a{
+    width:100%;
+    display:block;
+  }
+  footer{
+    width:100%;
+    padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+    font-size:.76rem;
+  }
+}
+
+</style>
+</head>
+<body>
+<header><h1>Lector de textos y URL</h1><div>Enfoca un texto impreso para mostrar su enlace asociado.</div></header>
+<main>
+<div class="grid">
+<section class="card">
+  <h2>Reconocimiento por cámara</h2>
+  <div class="video-wrap">
+    <video id="video" playsinline muted></video>
+    <div class="frame"></div><div class="label">Sitúa el texto dentro del recuadro</div>
+  </div>
+  <canvas id="canvas"></canvas>
+  <div class="controls">
+    <button id="start" class="primary">Activar cámara</button>
+    <button id="scan" class="secondary" disabled>Reconocer ahora</button>
+    <button id="auto" class="neutral" disabled>Escaneo automático: desactivado</button>
+    <button id="stop" class="neutral" disabled>Detener cámara</button>
+  </div>
+  <div id="status" class="status"></div>
+  <div id="progress" class="progress"><span></span></div>
+  <label for="manual">Texto detectado</label>
+  <textarea id="manual" placeholder="El texto reconocido aparecerá aquí. También puedes escribir un fragmento manualmente."></textarea>
+  <div class="controls"><button id="search" class="secondary">Buscar coincidencia</button></div>
+</section>
+
+<section class="card">
+  <h2>Resultado</h2>
+  <div id="result" class="result">
+    <div><span class="badge">Base cargada: ${data.length} registros</span><h3>Activa la cámara y enfoca un texto</h3></div>
+  </div>
+  <label for="threshold">Sensibilidad de coincidencia</label>
+  <select id="threshold">
+    <option value="0.30">Alta tolerancia</option>
+    <option value="0.42" selected>Equilibrada</option>
+    <option value="0.55">Más estricta</option>
+    <option value="0.68">Muy estricta</option>
+  </select>
+  <p class="help">La app compara las palabras reconocidas con los textos guardados y admite pequeños errores del OCR.</p>
+</section>
+</div>
+</main>
+<footer>La cámara requiere HTTPS o localhost. El OCR necesita conexión a Internet para cargar el motor de reconocimiento.</footer>
+
+<script>
+const RECORDS=${embedded};
+let stream=null,autoTimer=null,ocrBusy=false,lastOpenedUrl='',lastOpenedAt=0;
+const $=id=>document.getElementById(id);
+function esc(s=''){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function norm(s=''){return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/https?:\\/\\/\\S+/g,' ').replace(/[^a-z0-9ñü\\s]/gi,' ').replace(/\\s+/g,' ').trim()}
+function tok(s){return [...new Set(norm(s).split(' ').filter(w=>w.length>2))]}
+function sim(a,b){
+ const A=tok(a),B=tok(b);if(!A.length||!B.length)return 0;
+ const setB=new Set(B),inter=A.filter(x=>setB.has(x)).length;
+ const contain=inter/Math.min(A.length,B.length),union=new Set([...A,...B]).size,j=inter/union;
+ const na=norm(a),nb=norm(b),sub=(na.includes(nb)||nb.includes(na))?1:0;
+ return Math.max(contain*.72+j*.28,sub*.92);
+}
+function best(text){let r=null;for(const item of RECORDS){const score=sim(text,item.text);if(!r||score>r.score)r={item,score}}return r}
+function status(msg,type=''){const e=$('status');e.textContent=msg;e.className='status show '+type}
+function progress(p){const e=$('progress');e.style.display=p===null?'none':'block';e.querySelector('span').style.width=(p||0)+'%'}
+async function startCamera(){
+ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+ $('video').srcObject=stream;await $('video').play();
+}
+function stopCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null}
+function frame(){
+ const v=$('video'),c=$('canvas');if(!v.videoWidth)throw new Error('La cámara todavía no está preparada.');
+ const w=v.videoWidth,h=v.videoHeight,sx=w*.1,sy=h*.14,sw=w*.8,sh=h*.72,scale=Math.min(1,1600/sw);
+ c.width=Math.round(sw*scale);c.height=Math.round(sh*scale);
+ const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);
+ const img=x.getImageData(0,0,c.width,c.height),d=img.data;
+ for(let i=0;i<d.length;i+=4){const g=.299*d[i]+.587*d[i+1]+.114*d[i+2],val=Math.max(0,Math.min(255,(g-128)*1.35+128));d[i]=d[i+1]=d[i+2]=val}
+ x.putImageData(img,0,0);return c;
+}
+async function ensureOCR(){
+ if(window.Tesseract)return;
+ await new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=ok;s.onerror=()=>ko(new Error('No se pudo cargar el motor OCR.'));document.head.appendChild(s)})
+}
+async function recognize(){
+ if(ocrBusy)throw new Error('Ya hay un reconocimiento en curso.');ocrBusy=true;progress(1);
+ try{
+  await ensureOCR();
+  const r=await Tesseract.recognize(frame(),'spa+eng',{logger:m=>{if(m.status==='recognizing text'){const p=Math.round((m.progress||0)*100);progress(p);status('Reconociendo texto… '+p+'%')}else if(m.status)status('Preparando reconocimiento…')}});
+  return (r.data.text||'').replace(/\\s+\\n/g,'\\n').replace(/\\n{3,}/g,'\\n\\n').trim();
+ }finally{ocrBusy=false;setTimeout(()=>progress(null),500)}
+}
+function show(text){
+ const box=$('result');
+ if(!text.trim()){box.className='result notfound';box.innerHTML='<div><span class="badge">Sin texto</span><h3>No se ha detectado contenido suficiente</h3></div>';return}
+ const b=best(text),t=parseFloat($('threshold').value);
+ if(b&&b.score>=t){
+  const p=Math.round(b.score*100);
+  box.className='result found';
+  box.innerHTML='<div><span class="badge">Coincidencia '+p+'%</span><h3>Texto reconocido</h3><p>'+esc(b.item.text.length>260?b.item.text.slice(0,260)+'…':b.item.text)+'</p><p class="help">Abriendo automáticamente el enlace asociado…</p></div>';
+  status('Coincidencia encontrada. Abriendo el enlace automáticamente…','ok');
+
+  const now=Date.now();
+  if(b.item.url!==lastOpenedUrl || now-lastOpenedAt>10000){
+    lastOpenedUrl=b.item.url;
+    lastOpenedAt=now;
+    setTimeout(()=>{
+      window.location.href=b.item.url;
+    },700);
+  }
+ }else{
+  const p=b?Math.round(b.score*100):0;
+  box.className='result notfound';
+  box.innerHTML='<div><span class="badge">Mejor coincidencia: '+p+'%</span><h3>No se encontró un texto suficientemente parecido</h3><p class="help">Mejora el enfoque o selecciona una tolerancia mayor.</p></div>';
+ }
+}
+async function scanNow(){
+ try{const text=await recognize();$('manual').value=text;show(text)}catch(e){status(e.message,'error')}
+}
+$('start').onclick=async()=>{try{await startCamera();$('start').disabled=true;$('scan').disabled=false;$('auto').disabled=false;$('stop').disabled=false;status('Cámara activada.','ok')}catch(e){status(e.message,'error')}};
+$('scan').onclick=scanNow;
+$('stop').onclick=()=>{if(autoTimer){clearInterval(autoTimer);autoTimer=null}$('auto').textContent='Escaneo automático: desactivado';stopCamera();$('start').disabled=false;$('scan').disabled=true;$('auto').disabled=true;$('stop').disabled=true;status('Cámara detenida.')};
+$('auto').onclick=()=>{if(autoTimer){clearInterval(autoTimer);autoTimer=null;$('auto').textContent='Escaneo automático: desactivado'}else{autoTimer=setInterval(()=>{if(!ocrBusy)scanNow()},4500);$('auto').textContent='Escaneo automático: activado';scanNow()}};
+$('search').onclick=()=>show($('manual').value);
+$('threshold').onchange=()=>{if($('manual').value.trim())show($('manual').value)};
+window.addEventListener('beforeunload',stopCamera);
+<\/script>
+</body>
+</html>`;
+}
+
+$('generateReaderApp').onclick=()=>{
+  if(!records.length)return alert('Debes guardar al menos un texto y una URL antes de generar la segunda app.');
+  const reader=buildReaderApp(records);
+  download(reader,'app_lectora_textos_urls.html','text/html;charset=utf-8');
+};
+
+window.addEventListener('beforeunload',stopCamera);
+renderRecords();
+</script>
+</body>
+</html>
