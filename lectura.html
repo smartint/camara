@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Lector de textos y URL</title>
+<style>
+:root{--bg:#f3f6fb;--panel:#fff;--text:#172033;--muted:#667085;--primary:#2563eb;--line:#d9e1ee;--ok:#15803d;--warn:#b45309}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#153e75,#2563eb);color:#fff;padding:20px 16px;text-align:center}
+main{max-width:980px;margin:20px auto;padding:0 14px 40px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(31,41,55,.09)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.video-wrap{
+  position:relative;
+  width:100%;
+  aspect-ratio:4/3;
+  min-height:220px;
+  max-height:min(48dvh,520px);
+  background:#111827;
+  border-radius:16px;
+  overflow:hidden
+}
+video{width:100%;height:100%;object-fit:cover}
+@media(max-width:600px){
+  .video-wrap{aspect-ratio:auto;height:min(42dvh,360px);min-height:210px}
+}.frame{position:absolute;inset:14%;border:3px dashed rgba(255,255,255,.85);border-radius:14px}
+.label{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.62);color:white;padding:6px 10px;border-radius:999px;font-size:.82rem}
+button{border:0;border-radius:12px;padding:10px 14px;font-weight:750;cursor:pointer}.primary{background:#2563eb;color:#fff}.secondary{background:#e8eefb;color:#1e40af}.neutral{background:#eef2f7;color:#344054}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.status{display:none;margin-top:12px;padding:10px 12px;border-radius:12px}.status.show{display:block}.status.ok{background:#dcfce7;color:#166534}.status.error{background:#fee2e2;color:#991b1b}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:9px;display:none}.progress span{display:block;height:100%;width:0;background:#2563eb}
+.result{min-height:190px;display:flex;align-items:center;justify-content:center;text-align:center;border:2px dashed #cbd5e1;border-radius:16px;padding:18px}.result.found{border-color:#22c55e;background:#f0fdf4}.result.notfound{border-color:#f59e0b;background:#fffbeb}
+.result a{display:inline-block;margin-top:12px;background:#2563eb;color:#fff;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800;word-break:break-all}
+textarea,select{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:11px 12px;font:inherit;font-size:16px}textarea{min-height:120px;resize:vertical}
+label{display:block;font-weight:750;margin:12px 0 6px}.help{font-size:.88rem;color:var(--muted);line-height:1.45}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:.8rem;font-weight:750}
+canvas{display:none}footer{
+  flex:0 0 auto;
+  text-align:center;
+  color:var(--muted);
+  font-size:.83rem;
+  padding:12px max(10px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))
+}
+
+@media (max-width: 700px) and (orientation: portrait){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  body{display:block;min-height:100dvh}
+  header{
+    width:100%;
+    padding:calc(10px + env(safe-area-inset-top)) 10px 10px;
+  }
+  header h1{font-size:1.18rem;line-height:1.2}
+  main{
+    display:block;
+    width:100%;
+    max-width:none;
+    margin:0;
+    padding:8px 8px calc(18px + env(safe-area-inset-bottom));
+  }
+  .grid{display:block;width:100%;height:auto;min-height:0}
+  .card{
+    width:100%;
+    max-width:none;
+    max-height:none;
+    overflow:visible;
+    margin:0 0 10px;
+    padding:10px;
+    border-radius:12px;
+  }
+  .card h2{font-size:1.05rem}
+  .video-wrap{
+    width:100%;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    aspect-ratio:3/4;
+    border-radius:12px;
+  }
+  .frame{inset:10%}
+  .controls{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:7px;
+    width:100%;
+  }
+  .controls button{
+    width:100%;
+    min-height:46px;
+  }
+  textarea,select{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    font-size:16px;
+  }
+  textarea{min-height:120px}
+  .result{
+    min-height:150px;
+    padding:14px;
+  }
+  .result a{
+    width:100%;
+    display:block;
+  }
+  footer{
+    width:100%;
+    padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+    font-size:.76rem;
+  }
+}
+
+</style>
+</head>
+<body>
+<header><h1>Lector de textos y URL</h1><div>Enfoca un texto impreso para mostrar su enlace asociado.</div></header>
+<main>
+<div class="grid">
+<section class="card">
+  <h2>Reconocimiento por cámara</h2>
+  <div class="video-wrap">
+    <video id="video" playsinline muted></video>
+    <div class="frame"></div><div class="label">Sitúa el texto dentro del recuadro</div>
+  </div>
+  <canvas id="canvas"></canvas>
+  <div class="controls">
+    <button id="start" class="primary">Activar cámara</button>
+    <button id="scan" class="secondary" disabled>Reconocer ahora</button>
+    <button id="auto" class="neutral" disabled>Escaneo automático: desactivado</button>
+    <button id="stop" class="neutral" disabled>Detener cámara</button>
+  </div>
+  <div id="status" class="status"></div>
+  <div id="progress" class="progress"><span></span></div>
+  <label for="manual">Texto detectado</label>
+  <textarea id="manual" placeholder="El texto reconocido aparecerá aquí. También puedes escribir un fragmento manualmente."></textarea>
+  <div class="controls"><button id="search" class="secondary">Buscar coincidencia</button></div>
+</section>
+
+<section class="card">
+  <h2>Resultado</h2>
+  <div id="result" class="result">
+    <div><span class="badge">Base cargada: 1 registros</span><h3>Activa la cámara y enfoca un texto</h3></div>
+  </div>
+  <label for="threshold">Sensibilidad de coincidencia</label>
+  <select id="threshold">
+    <option value="0.30">Alta tolerancia</option>
+    <option value="0.42" selected>Equilibrada</option>
+    <option value="0.55">Más estricta</option>
+    <option value="0.68">Muy estricta</option>
+  </select>
+  <p class="help">La app compara las palabras reconocidas con los textos guardados y admite pequeños errores del OCR.</p>
+</section>
+</div>
+</main>
+<footer>La cámara requiere HTTPS o localhost. El OCR necesita conexión a Internet para cargar el motor de reconocimiento.</footer>
+
+<script>
+const RECORDS=[{"id":"mrjozrfkps2id9","text":"Necesito que, teniendo en cuenta los\nCuadernillo. Una vez establecida la\nhtml que me permita marcar aquellos\n“alumnado, fecha de evaluación, sesig\n“Necesito crear una versión de la apl:\nseleccionar los saberes básicos super\nocultarse. Al final deberán poder imp\n~ Se mostrarán debajo los saberes que s\nYa está preparada la versión por págilr\nlos saberes básicos asociados para poc\ndatos del alumnado y la fecha. La corr\nDescargar HTML\nDescargar ZIP con HTML + imágenes de pá\nIncluye:\ni ;\n— galería de páginas del cuadernillo iS\n— botón para mostrar u ocultar la galería\nSelección de páginas — \u003ca\ndespliegue “inferior con los saber!\nasillas de Trabajado y Superad","url":"http://www.canariasebook.org","createdAt":"2026-07-13T20:46:09.825Z"}];
+let stream=null,autoTimer=null,ocrBusy=false,lastOpenedUrl='',lastOpenedAt=0;
+const $=id=>document.getElementById(id);
+function esc(s=''){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function norm(s=''){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/https?:\/\/\S+/g,' ').replace(/[^a-z0-9ñü\s]/gi,' ').replace(/\s+/g,' ').trim()}
+function tok(s){return [...new Set(norm(s).split(' ').filter(w=>w.length>2))]}
+function sim(a,b){
+ const A=tok(a),B=tok(b);if(!A.length||!B.length)return 0;
+ const setB=new Set(B),inter=A.filter(x=>setB.has(x)).length;
+ const contain=inter/Math.min(A.length,B.length),union=new Set([...A,...B]).size,j=inter/union;
+ const na=norm(a),nb=norm(b),sub=(na.includes(nb)||nb.includes(na))?1:0;
+ return Math.max(contain*.72+j*.28,sub*.92);
+}
+function best(text){let r=null;for(const item of RECORDS){const score=sim(text,item.text);if(!r||score>r.score)r={item,score}}return r}
+function status(msg,type=''){const e=$('status');e.textContent=msg;e.className='status show '+type}
+function progress(p){const e=$('progress');e.style.display=p===null?'none':'block';e.querySelector('span').style.width=(p||0)+'%'}
+async function startCamera(){
+ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+ $('video').srcObject=stream;await $('video').play();
+}
+function stopCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null}
+function frame(){
+ const v=$('video'),c=$('canvas');if(!v.videoWidth)throw new Error('La cámara todavía no está preparada.');
+ const w=v.videoWidth,h=v.videoHeight,sx=w*.1,sy=h*.14,sw=w*.8,sh=h*.72,scale=Math.min(1,1600/sw);
+ c.width=Math.round(sw*scale);c.height=Math.round(sh*scale);
+ const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);
+ const img=x.getImageData(0,0,c.width,c.height),d=img.data;
+ for(let i=0;i<d.length;i+=4){const g=.299*d[i]+.587*d[i+1]+.114*d[i+2],val=Math.max(0,Math.min(255,(g-128)*1.35+128));d[i]=d[i+1]=d[i+2]=val}
+ x.putImageData(img,0,0);return c;
+}
+async function ensureOCR(){
+ if(window.Tesseract)return;
+ await new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=ok;s.onerror=()=>ko(new Error('No se pudo cargar el motor OCR.'));document.head.appendChild(s)})
+}
+async function recognize(){
+ if(ocrBusy)throw new Error('Ya hay un reconocimiento en curso.');ocrBusy=true;progress(1);
+ try{
+  await ensureOCR();
+  const r=await Tesseract.recognize(frame(),'spa+eng',{logger:m=>{if(m.status==='recognizing text'){const p=Math.round((m.progress||0)*100);progress(p);status('Reconociendo texto… '+p+'%')}else if(m.status)status('Preparando reconocimiento…')}});
+  return (r.data.text||'').replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+ }finally{ocrBusy=false;setTimeout(()=>progress(null),500)}
+}
+function show(text){
+ const box=$('result');
+ if(!text.trim()){box.className='result notfound';box.innerHTML='<div><span class="badge">Sin texto</span><h3>No se ha detectado contenido suficiente</h3></div>';return}
+ const b=best(text),t=parseFloat($('threshold').value);
+ if(b&&b.score>=t){
+  const p=Math.round(b.score*100);
+  box.className='result found';
+  box.innerHTML='<div><span class="badge">Coincidencia '+p+'%</span><h3>Texto reconocido</h3><p>'+esc(b.item.text.length>260?b.item.text.slice(0,260)+'…':b.item.text)+'</p><p class="help">Abriendo automáticamente el enlace asociado…</p></div>';
+  status('Coincidencia encontrada. Abriendo el enlace automáticamente…','ok');
+
+  const now=Date.now();
+  if(b.item.url!==lastOpenedUrl || now-lastOpenedAt>10000){
+    lastOpenedUrl=b.item.url;
+    lastOpenedAt=now;
+    setTimeout(()=>{
+      window.location.href=b.item.url;
+    },700);
+  }
+ }else{
+  const p=b?Math.round(b.score*100):0;
+  box.className='result notfound';
+  box.innerHTML='<div><span class="badge">Mejor coincidencia: '+p+'%</span><h3>No se encontró un texto suficientemente parecido</h3><p class="help">Mejora el enfoque o selecciona una tolerancia mayor.</p></div>';
+ }
+}
+async function scanNow(){
+ try{const text=await recognize();$('manual').value=text;show(text)}catch(e){status(e.message,'error')}
+}
+$('start').onclick=async()=>{try{await startCamera();$('start').disabled=true;$('scan').disabled=false;$('auto').disabled=false;$('stop').disabled=false;status('Cámara activada.','ok')}catch(e){status(e.message,'error')}};
+$('scan').onclick=scanNow;
+$('stop').onclick=()=>{if(autoTimer){clearInterval(autoTimer);autoTimer=null}$('auto').textContent='Escaneo automático: desactivado';stopCamera();$('start').disabled=false;$('scan').disabled=true;$('auto').disabled=true;$('stop').disabled=true;status('Cámara detenida.')};
+$('auto').onclick=()=>{if(autoTimer){clearInterval(autoTimer);autoTimer=null;$('auto').textContent='Escaneo automático: desactivado'}else{autoTimer=setInterval(()=>{if(!ocrBusy)scanNow()},4500);$('auto').textContent='Escaneo automático: activado';scanNow()}};
+$('search').onclick=()=>show($('manual').value);
+$('threshold').onchange=()=>{if($('manual').value.trim())show($('manual').value)};
+window.addEventListener('beforeunload',stopCamera);
+</script>
+</body>
+</html>
