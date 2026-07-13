@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Lector de textos y URL</title>
+<style>
+:root{--bg:#f3f6fb;--panel:#fff;--text:#172033;--muted:#667085;--primary:#2563eb;--line:#d9e1ee;--ok:#15803d;--warn:#b45309}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#153e75,#2563eb);color:#fff;padding:20px 16px;text-align:center}
+main{max-width:980px;margin:20px auto;padding:0 14px 40px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(31,41,55,.09)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.video-wrap{
+  position:relative;
+  width:100%;
+  aspect-ratio:4/3;
+  min-height:220px;
+  max-height:min(48dvh,520px);
+  background:#111827;
+  border-radius:16px;
+  overflow:hidden
+}
+video{width:100%;height:100%;object-fit:cover}
+@media(max-width:600px){
+  .video-wrap{aspect-ratio:auto;height:min(42dvh,360px);min-height:210px}
+}.frame{
+  position:absolute;left:7%;right:7%;top:42%;height:16%;
+  border:3px dashed rgba(255,255,255,.9);border-radius:12px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.22)
+}
+.label{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.62);color:white;padding:6px 10px;border-radius:999px;font-size:.82rem}
+button{border:0;border-radius:12px;padding:10px 14px;font-weight:750;cursor:pointer}.primary{background:#2563eb;color:#fff}.secondary{background:#e8eefb;color:#1e40af}.neutral{background:#eef2f7;color:#344054}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.status{display:none;margin-top:12px;padding:10px 12px;border-radius:12px}.status.show{display:block}.status.ok{background:#dcfce7;color:#166534}.status.error{background:#fee2e2;color:#991b1b}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:9px;display:none}.progress span{display:block;height:100%;width:0;background:#2563eb}
+.result{min-height:190px;display:flex;align-items:center;justify-content:center;text-align:center;border:2px dashed #cbd5e1;border-radius:16px;padding:18px}.result.found{border-color:#22c55e;background:#f0fdf4}.result.notfound{border-color:#f59e0b;background:#fffbeb}
+.result a{display:inline-block;margin-top:12px;background:#2563eb;color:#fff;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800;word-break:break-all}
+textarea,input[type="text"],select{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:11px 12px;font:inherit;font-size:16px}
+input[type="text"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+textarea{min-height:120px;resize:vertical}
+label{display:block;font-weight:750;margin:12px 0 6px}.help{font-size:.88rem;color:var(--muted);line-height:1.45}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:.8rem;font-weight:750}
+canvas{display:none}footer{
+  flex:0 0 auto;
+  text-align:center;
+  color:var(--muted);
+  font-size:.83rem;
+  padding:12px max(10px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))
+}
+
+@media (max-width: 700px) and (orientation: portrait){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  body{display:block;min-height:100dvh}
+  header{
+    width:100%;
+    padding:calc(10px + env(safe-area-inset-top)) 10px 10px;
+  }
+  header h1{font-size:1.18rem;line-height:1.2}
+  main{
+    display:block;
+    width:100%;
+    max-width:none;
+    margin:0;
+    padding:8px 8px calc(18px + env(safe-area-inset-bottom));
+  }
+  .grid{display:block;width:100%;height:auto;min-height:0}
+  .card{
+    width:100%;
+    max-width:none;
+    max-height:none;
+    overflow:visible;
+    margin:0 0 10px;
+    padding:10px;
+    border-radius:12px;
+  }
+  .card h2{font-size:1.05rem}
+  .video-wrap{
+    width:100%;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    aspect-ratio:3/4;
+    border-radius:12px;
+  }
+  .frame{left:5%;right:5%;top:42%;height:16%}
+  .controls{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:7px;
+    width:100%;
+  }
+  .controls button{
+    width:100%;
+    min-height:46px;
+  }
+  textarea,input[type="text"],select{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    font-size:16px;
+  }
+  input[type="text"]{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  textarea{min-height:120px}
+  .result{
+    min-height:150px;
+    padding:14px;
+  }
+  .result a{
+    width:100%;
+    display:block;
+  }
+  footer{
+    width:100%;
+    padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+    font-size:.76rem;
+  }
+}
+
+</style>
+</head>
+<body>
+<header><h1>Lector de textos y URL</h1><div>Enfoca una sola línea de texto para abrir su enlace asociado.</div></header>
+<main>
+<div class="grid">
+<section class="card">
+  <h2>Reconocimiento por cámara</h2>
+  <div class="video-wrap">
+    <video id="video" playsinline webkit-playsinline autoplay muted></video>
+    <div class="frame"></div><div class="label">Sitúa una sola línea dentro de la franja</div>
+  </div>
+  <canvas id="canvas"></canvas>
+  <div class="controls">
+    <button id="start" class="primary">Activar cámara</button>
+    <button id="scan" class="secondary" disabled>Reconocer ahora</button>
+    <button id="auto" class="neutral" disabled>Escaneo automático: desactivado</button>
+    <button id="stop" class="neutral" disabled>Detener cámara</button>
+  </div>
+  <div id="status" class="status"></div>
+  <div id="progress" class="progress"><span></span></div>
+  <label for="manual">Texto detectado</label>
+  <input id="manual" type="text" placeholder="El texto reconocido aparecerá aquí en una sola línea.">
+  <div class="controls"><button id="search" class="secondary">Buscar coincidencia</button></div>
+</section>
+
+<section class="card">
+  <h2>Resultado</h2>
+  <div id="result" class="result">
+    <div><span class="badge">Base cargada: 2 registros</span><h3>Activa la cámara y enfoca un texto</h3></div>
+  </div>
+  <label for="threshold">Sensibilidad de coincidencia</label>
+  <select id="threshold">
+    <option value="0.30">Alta tolerancia</option>
+    <option value="0.42" selected>Equilibrada</option>
+    <option value="0.55">Más estricta</option>
+    <option value="0.68">Muy estricta</option>
+  </select>
+  <p class="help">La app solo analiza la línea situada dentro de la franja central y la compara con los textos guardados.</p>
+</section>
+</div>
+</main>
+<footer>La cámara requiere HTTPS o localhost. El OCR necesita conexión a Internet para cargar el motor de reconocimiento.</footer>
+
+<script>
+const RECORDS=[{"id":"mrjsoziyyg8rhv","text":"No me mueve, mi Dios, para quererte\nel cielo que me tienes prometido,\nni me mueve el infierno tan temido\npara dejar por eso de ofenderte.\nTú me mueves, Señor, muéveme el verte\nclavado en una cruz y escarnecido,\nmuéveme ver tu cuerpo tan herido,\nmuévenme tus afrentas y tu muerte.","url":"https://youtu.be/S3pJBN-WNVE?si=XPLrfmGwrMmLZqSd","createdAt":"2026-07-13T22:29:45.562Z","updatedAt":"2026-07-13T22:31:46.715Z"},{"id":"mrjsx8slcyeq1r","text":"— Porque te tengo y no\nporque te pienso\nporque la noche está de ojos ab\nporque la noche pasa y digo am\nporque has venido a recoger fui\ny eres mejor que todas tus imáge\nporque eres linda desde el pie has\nporque eres buena desde el alma a\nporque te escondes dulce en el org","url":"https://youtube.com/shorts/x1KWJsnmUng?si=Z00Lv4P-YS_zrRuj","createdAt":"2026-07-13T22:36:10.821Z"}];
+let stream=null,autoTimer=null,ocrBusy=false,lastOpenedUrl='',lastOpenedAt=0;
+const $=id=>document.getElementById(id);
+function esc(s=''){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function norm(s=''){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/https?:\/\/\S+/g,' ').replace(/[^a-z0-9ñü\s]/gi,' ').replace(/\s+/g,' ').trim()}
+function tok(s){return [...new Set(norm(s).split(' ').filter(w=>w.length>2))]}
+function sim(a,b){
+ const A=tok(a),B=tok(b);if(!A.length||!B.length)return 0;
+ const setB=new Set(B),inter=A.filter(x=>setB.has(x)).length;
+ const contain=inter/Math.min(A.length,B.length),union=new Set([...A,...B]).size,j=inter/union;
+ const na=norm(a),nb=norm(b),sub=(na.includes(nb)||nb.includes(na))?1:0;
+ return Math.max(contain*.72+j*.28,sub*.92);
+}
+function best(text){let r=null;for(const item of RECORDS){const score=sim(text,item.text);if(!r||score>r.score)r={item,score}}return r}
+function cleanSingleLine(raw=''){
+ const lines=raw.split(/\r?\n/)
+  .map(s=>s.replace(/[|¦_=~^`´]+/g,' ').replace(/\s+/g,' ').trim())
+  .filter(Boolean);
+ if(!lines.length)return '';
+ return lines.map(line=>{
+   const letters=(line.match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g)||[]).length;
+   const digits=(line.match(/\d/g)||[]).length;
+   const odd=(line.match(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9.,;:¡!¿?'"()\- ]/g)||[]).length;
+   const words=line.split(/\s+/).filter(Boolean).length;
+   let score=letters*2+words*4+Math.min(line.length,90)*.25-odd*5-digits*.8;
+   if(words<3)score-=12;
+   if(line.length<12)score-=10;
+   return {line,score};
+ }).sort((a,b)=>b.score-a.score)[0].line.slice(0,180);
+}
+
+function status(msg,type=''){const e=$('status');e.textContent=msg;e.className='status show '+type}
+function progress(p){const e=$('progress');e.style.display=p===null?'none':'block';e.querySelector('span').style.width=(p||0)+'%'}
+async function startCamera(){
+ const video=$('video');
+ stopCamera();
+
+ if(!window.isSecureContext && location.hostname!=='localhost'){
+   throw new Error('La cámara necesita abrir esta app desde una dirección HTTPS. El navegador puede bloquearla si se abre directamente como archivo HTML.');
+ }
+ if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+   throw new Error('Este navegador no ofrece acceso directo a la cámara. Usa Chrome, Edge o Safari actualizado y abre la app mediante HTTPS.');
+ }
+
+ const attempts=[
+   {video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false},
+   {video:{facingMode:'environment'},audio:false},
+   {video:true,audio:false}
+ ];
+ let lastError=null;
+
+ for(const constraints of attempts){
+   try{
+     stream=await navigator.mediaDevices.getUserMedia(constraints);
+     video.srcObject=stream;
+     video.muted=true;
+     video.setAttribute('playsinline','');
+     video.setAttribute('webkit-playsinline','');
+     video.setAttribute('autoplay','');
+
+     await new Promise((resolve,reject)=>{
+       if(video.readyState>=1)return resolve();
+       const timer=setTimeout(()=>reject(new Error('La cámara tarda demasiado en iniciarse.')),8000);
+       video.addEventListener('loadedmetadata',()=>{clearTimeout(timer);resolve()},{once:true});
+     });
+
+     try{await video.play()}catch(_){}
+     if(!video.videoWidth)await new Promise(r=>setTimeout(r,400));
+     return;
+   }catch(err){
+     lastError=err;
+     stopCamera();
+   }
+ }
+
+ const name=lastError?.name||'';
+ if(name==='NotAllowedError'||name==='PermissionDeniedError'){
+   throw new Error('Permiso de cámara denegado. Autoriza la cámara en los ajustes del navegador y vuelve a intentarlo.');
+ }
+ if(name==='NotFoundError'||name==='DevicesNotFoundError'){
+   throw new Error('No se ha encontrado ninguna cámara disponible.');
+ }
+ if(name==='NotReadableError'||name==='TrackStartError'){
+   throw new Error('La cámara está siendo utilizada por otra aplicación. Ciérrala y vuelve a intentarlo.');
+ }
+ throw new Error('No se pudo iniciar la cámara: '+(lastError?.message||'error desconocido'));
+}
+function stopCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null}
+function frame(){
+ const v=$('video'),c=$('canvas');
+ if(!v.videoWidth)throw new Error('La cámara todavía no está preparada.');
+ const w=v.videoWidth,h=v.videoHeight;
+ const sx=w*.07,sy=h*.42,sw=w*.86,sh=h*.16;
+ const targetW=Math.min(1800,Math.max(1000,Math.round(sw)));
+ const scale=targetW/sw;
+ c.width=Math.round(sw*scale);
+ c.height=Math.max(120,Math.round(sh*scale));
+ const x=c.getContext('2d',{willReadFrequently:true});
+ x.drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);
+ const img=x.getImageData(0,0,c.width,c.height),d=img.data;
+ for(let i=0;i<d.length;i+=4){
+   const g=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+   let val=(g-128)*1.7+128;
+   if(val>205)val=255; else if(val<55)val=0;
+   val=Math.max(0,Math.min(255,val));
+   d[i]=d[i+1]=d[i+2]=val;
+ }
+ x.putImageData(img,0,0);
+ return c;
+}
+async function ensureOCR(){
+ if(window.Tesseract)return;
+ await new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=ok;s.onerror=()=>ko(new Error('No se pudo cargar el motor OCR.'));document.head.appendChild(s)})
+}
+async function recognize(){
+ if(ocrBusy)throw new Error('Ya hay un reconocimiento en curso.');ocrBusy=true;progress(1);
+ try{
+  await ensureOCR();
+  const r=await Tesseract.recognize(
+    frame(),
+    'spa+eng',
+    {
+      logger:m=>{
+        if(m.status==='recognizing text'){
+          const p=Math.round((m.progress||0)*100);
+          progress(p);
+          status('Reconociendo una línea… '+p+'%');
+        }else if(m.status)status('Preparando reconocimiento…');
+      },
+      tessedit_pageseg_mode:'7',
+      preserve_interword_spaces:'1'
+    }
+  );
+  return cleanSingleLine(r.data.text||'');
+ }finally{ocrBusy=false;setTimeout(()=>progress(null),500)}
+}
+function show(text){
+ const box=$('result');
+ if(!text.trim()){box.className='result notfound';box.innerHTML='<div><span class="badge">Sin texto</span><h3>No se ha detectado contenido suficiente</h3></div>';return}
+ const b=best(text),t=parseFloat($('threshold').value);
+ if(b&&b.score>=t){
+  const p=Math.round(b.score*100);
+  box.className='result found';
+  const oneLine=b.item.text.replace(/\s+/g,' ').trim();
+  const shortLine=oneLine.length>120?oneLine.slice(0,120)+'…':oneLine;
+  box.innerHTML='<div><span class="badge">Coincidencia '+p+'%</span><h3>Texto reconocido</h3><p style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">'+esc(shortLine)+'</p><p class="help">Abriendo automáticamente el enlace asociado…</p></div>';
+  status('Coincidencia encontrada. Abriendo el enlace automáticamente…','ok');
+
+  const now=Date.now();
+  if(b.item.url!==lastOpenedUrl || now-lastOpenedAt>10000){
+    lastOpenedUrl=b.item.url;
+    lastOpenedAt=now;
+    setTimeout(()=>{
+      window.location.href=b.item.url;
+    },700);
+  }
+ }else{
+  const p=b?Math.round(b.score*100):0;
+  box.className='result notfound';
+  box.innerHTML='<div><span class="badge">Mejor coincidencia: '+p+'%</span><h3>No se encontró un texto suficientemente parecido</h3><p class="help">Mejora el enfoque o selecciona una tolerancia mayor.</p></div>';
+ }
+}
+async function scanNow(){
+ try{
+  const text=await recognize();
+  $('manual').value=text;
+  show(text);
+ }catch(e){status(e.message,'error')}
+}
+$('start').onclick=async()=>{
+ $('start').disabled=true;
+ status('Solicitando permiso para usar la cámara…');
+ try{
+   await startCamera();
+   $('scan').disabled=false;
+   $('auto').disabled=false;
+   $('stop').disabled=false;
+   status('Cámara activada. Sitúa una línea dentro de la franja.','ok');
+ }catch(e){
+   $('start').disabled=false;
+   $('scan').disabled=true;
+   $('auto').disabled=true;
+   $('stop').disabled=true;
+   status(e.message,'error');
+ }
+};
+$('scan').onclick=scanNow;
+$('stop').onclick=()=>{if(autoTimer){clearInterval(autoTimer);autoTimer=null}$('auto').textContent='Escaneo automático: desactivado';stopCamera();$('start').disabled=false;$('scan').disabled=true;$('auto').disabled=true;$('stop').disabled=true;status('Cámara detenida.')};
+$('auto').onclick=()=>{if(autoTimer){clearInterval(autoTimer);autoTimer=null;$('auto').textContent='Escaneo automático: desactivado'}else{autoTimer=setInterval(()=>{if(!ocrBusy)scanNow()},4500);$('auto').textContent='Escaneo automático: activado';scanNow()}};
+$('search').onclick=()=>show($('manual').value);
+$('threshold').onchange=()=>{if($('manual').value.trim())show($('manual').value)};
+window.addEventListener('beforeunload',stopCamera);
+</script>
+</body>
+</html>
