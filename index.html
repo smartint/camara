@@ -829,15 +829,15 @@ function sim(a,b){
 }
 function best(text){let r=null;for(const item of RECORDS){const score=sim(text,item.text);if(!r||score>r.score)r={item,score}}return r}
 function cleanSingleLine(raw=''){
- const lines=raw.split(/\r?\n/)
-  .map(s=>s.replace(/[|¦_=~^\`´]+/g,' ').replace(/\s+/g,' ').trim())
+ const lines=raw.split(/\\r?\\n/)
+  .map(s=>s.replace(/[|¦_=~^\`´]+/g,' ').replace(/\\s+/g,' ').trim())
   .filter(Boolean);
  if(!lines.length)return '';
  return lines.map(line=>{
    const letters=(line.match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g)||[]).length;
-   const digits=(line.match(/\d/g)||[]).length;
-   const odd=(line.match(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9.,;:¡!¿?'"()\- ]/g)||[]).length;
-   const words=line.split(/\s+/).filter(Boolean).length;
+   const digits=(line.match(/\\d/g)||[]).length;
+   const odd=(line.match(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9.,;:¡!¿?'"()\\- ]/g)||[]).length;
+   const words=line.split(/\\s+/).filter(Boolean).length;
    let score=letters*2+words*4+Math.min(line.length,90)*.25-odd*5-digits*.8;
    if(words<3)score-=12;
    if(line.length<12)score-=10;
@@ -957,7 +957,7 @@ function show(text){
  if(b&&b.score>=t){
   const p=Math.round(b.score*100);
   box.className='result found';
-  const oneLine=b.item.text.replace(/\s+/g,' ').trim();
+  const oneLine=b.item.text.replace(/\\s+/g,' ').trim();
   const shortLine=oneLine.length>120?oneLine.slice(0,120)+'…':oneLine;
   box.innerHTML='<div><span class="badge">Coincidencia '+p+'%</span><h3>Texto reconocido</h3><p style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">'+esc(shortLine)+'</p><p class="help">Abriendo automáticamente el enlace asociado…</p></div>';
   status('Coincidencia encontrada. Abriendo el enlace automáticamente…','ok');
