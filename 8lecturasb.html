@@ -1,0 +1,89 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Lector de textos y URL</title><style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#667085;--blue:#2563eb;--line:#d8e0ec;--danger:#b91c1c;--ok:#166534}
+*{box-sizing:border-box}html,body{margin:0;width:100%;min-height:100%;overflow-x:hidden}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(135deg,#163a70,#2563eb);color:white;padding:calc(14px + env(safe-area-inset-top)) 14px 14px}header>div{max-width:1400px;margin:auto}h1{font-size:clamp(1.25rem,3vw,2rem);margin:0}.sub{opacity:.9;margin-top:5px}
+main{max-width:1400px;margin:auto;padding:14px}.grid{display:grid;grid-template-columns:minmax(300px,.9fr) minmax(360px,1.1fr);gap:14px;align-items:start}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.07)}h2{margin-top:0;font-size:1.2rem}
+.videoBox{position:relative;width:100%;aspect-ratio:4/3;background:#111827;border-radius:14px;overflow:hidden}.videoBox video{width:100%;height:100%;object-fit:cover}.frame{position:absolute;inset:8%;border:3px dashed rgba(255,255,255,.9);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.12);pointer-events:none}.hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;padding:5px 9px;border-radius:999px;font-size:.78rem;white-space:nowrap}
+.controls,.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.toolbar{margin-bottom:10px}button,.button{border:0;border-radius:11px;padding:10px 13px;font-weight:750;font-size:.94rem;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e7eefc;color:#1e40af}.neutral{background:#eef2f7;color:#344054}.success{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button:disabled{opacity:.5;cursor:not-allowed}
+label{display:block;font-weight:750;margin:12px 0 6px}textarea,input{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:11px;padding:10px 11px;font:inherit;font-size:16px;background:white;color:var(--ink)}textarea{min-height:150px;resize:vertical}.grow{flex:1 1 220px}
+.status{display:none;margin-top:10px;padding:10px;border-radius:10px;background:#eef2ff;color:#3730a3}.status.show{display:block}.status.ok{background:#dcfce7;color:#166534}.status.error{background:#fee2e2;color:#991b1b}.progress{display:none;height:9px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:8px}.progress span{display:block;height:100%;width:0;background:var(--blue)}
+.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;min-width:700px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f8fafc}.textCell{white-space:pre-wrap;max-width:420px}.url{word-break:break-all}.actions{display:flex;gap:6px;flex-wrap:wrap}.actions button{padding:7px 9px;font-size:.82rem}.empty{text-align:center;color:var(--muted);padding:25px}.count{font-size:.85rem;background:#eef2ff;color:#3730a3;padding:5px 8px;border-radius:999px}.generate{margin-top:14px;padding:13px;border:2px dashed #93c5fd;border-radius:13px;background:#eff6ff}.help{font-size:.86rem;color:var(--muted);line-height:1.45}.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:12px;z-index:30}.modal.show{display:flex}.modalBox{background:white;width:min(680px,100%);border-radius:15px;padding:16px}.modalActions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}canvas{display:none}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){main{padding:8px}.card{padding:10px;border-radius:12px;margin-bottom:9px}.grid{display:block}.videoBox{aspect-ratio:3/4}.controls,.toolbar{display:grid;grid-template-columns:1fr}.controls button,.toolbar button,.toolbar .button{width:100%;min-height:44px}.grow{width:100%}.tableWrap{border:0;overflow:visible}table,thead,tbody,tr,th,td{display:block;width:100%}table{min-width:0}thead{display:none}tbody{display:grid;gap:8px}tr{border:1px solid var(--line);border-radius:11px;padding:9px;background:#fff}td{border:0;padding:5px 0;max-width:none}.actions{display:grid;grid-template-columns:1fr 1fr}.actions button{min-height:40px}}
+.readerGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.result{min-height:180px;border:2px dashed #cbd5e1;border-radius:13px;padding:15px;display:flex;align-items:center;justify-content:center;text-align:center}.result.ok{background:#f0fdf4;border-color:#22c55e}@media(max-width:800px){.readerGrid{grid-template-columns:1fr}}</style></head><body><header><div><h1>Lector de textos y URL</h1><div class="sub">Escanea cualquier bloque de texto. Bastará con que una de sus líneas coincida para abrir la URL.</div></div></header><main><div class="readerGrid"><section class="card"><div class="videoBox"><video id="rv" autoplay muted playsinline webkit-playsinline></video><div class="frame"></div><div class="hint">Sitúa el texto dentro del recuadro</div></div><canvas id="rc"></canvas><div class="controls"><button id="rs" class="primary">Activar cámara</button><button id="scan" class="secondary" disabled>Escanear</button><button id="auto" class="neutral" disabled>Escaneo automático: desactivado</button><button id="rst" class="neutral" disabled>Detener cámara</button></div><div id="rstatus" class="status"></div><div id="rprog" class="progress"><span></span></div><label>Texto detectado</label><textarea id="detected" readonly></textarea></section><section class="card"><h2>Resultado</h2><div id="result" class="result"><div>Activa la cámara y enfoca un texto.</div></div></section></div></main><script>'use strict';const RECORDS=JSON.parse(decodeURIComponent(escape(atob('W3siaWQiOiJtcmttOGppbzNtM29kZyIsInRleHQiOiJQb3JxdWUgdGUgdGVuZ28geSBub1xucG9ycXVlIHRlIHBpZW5zbyIsInVybCI6Imh0dHBzOi8veW91dHUuYmUveDFLV0pzbm1Vbmc/c2k9TXU1QjVWVHc3eWozc0dFZiJ9LHsiaWQiOiJtcmttOGppbzRrbXNuYiIsInRleHQiOiJFc3TDoSBlbiBwZW51bWJyYSBlbCBjdWFydG8sIGxvIGhhIGludmFkaWRvXG5sYSBpbmNsaW5hY2nDs24gZGVsIHNvbCwgbGFzIGx1Y2VzIHJvamFzIiwidXJsIjoiaHR0cHM6Ly95b3V0dS5iZS9DSFFjUHk5cXBzST9zaT1vQ0lDRHBOLU9lRmt2TXlaIn0seyJpZCI6Im1ya204amlvMHdiMHBqIiwidGV4dCI6Ik5vIG1lIG11ZXZlLCBtaSBEaW9zLCBwYXJhIHF1ZXJlcnRlXG5lbCBjaWVsbyBxdWUgbWUgdGllbmVzIHByb21ldGlkbywiLCJ1cmwiOiJodHRwczovL3lvdXR1LmJlL1MzcEpCTi1XTlZFP3NpPTZZVy1vSEpOUllDT2VocDcifSx7ImlkIjoibXJrbThqaW93M3ZkMmoiLCJ0ZXh0IjoiQWwgb2xtbyB2aWVqbywgaGVuZGlkbyBwb3IgZWwgcmF5b1xueSBlbiBzdSBtaXRhZCBwb2RyaWRvLCIsInVybCI6Imh0dHBzOi8veW91dHUuYmUvdHEwbHVELUphTTQ/c2k9S2NZY1pFcGloV1NqdTZBbCJ9LHsiaWQiOiJtcmttOGppb2ZkYWZ6aiIsInRleHQiOiLCv1F1w6kgY2VndWVkYWQgbWUgdHJ1am8gYSB0YW50b3MgZGHDsW9zP1xuwr9Qb3IgZMOzbmRlIG1lIGxsZXZhcm9uIGRlc3ZhcsOtb3MsIiwidXJsIjoiaHR0cHM6Ly95b3V0dS5iZS9UZXlhYy16bXQyYz9zaT1qakhyTV9BZzdhNnRGYWRjIn0seyJpZCI6Im1ya204amlvMGNsZWkwIiwidGV4dCI6IkVzdGEgY2FiZXphLCBjdWFuZG8gdml2YSwgdHV2b1xuc29icmUgbGEgYXJxdWl0ZWN0dXJhIGRlIGVzdG9zIGh1ZXNvcyIsInVybCI6Imh0dHBzOi8veW91dHUuYmUvX2gzZUxNMzRSWGc/c2k9N1owU25GVjd4M1NzdlU4eiJ9LHsiaWQiOiJtcmttOGppb2d1dnlpdCIsInRleHQiOiJWb2x2ZWRsZSBsYSBibGFuY3VyYSBhIGxhIGF6dWNlbmFcbnkgZWwgcHVycMO6cmVvIGNvbG9yIGEgbG9zIHJvc2FsZXMsIiwidXJsIjoiaHR0cHM6Ly95b3V0dS5iZS9VU1RycFQtSENLWT9zaT1JQXo3bmw5X3lUVTZ5X08tIn0seyJpZCI6Im1ya204amlvMDYzd21pIiwidGV4dCI6IkhheSBnb2xwZXMgZW4gbGEgdmlkYSwgdGFuIGZ1ZXJ0ZXPigKYgwqFZbyBubyBzw6khXG5Hb2xwZXMgY29tbyBkZWwgb2RpbyBkZSBEaW9zOyBjb21vIHNpIGFudGUgZWxsb3MsIiwidXJsIjoiaHR0cHM6Ly95b3V0dS5iZS85a2ZxSWdCZHZHST9zaT1nWVlWNTA3T1FwTTN6cmhYIn1d'))));
+const $=id=>document.getElementById(id);
+let stream=null,busy=false,timer=null,last='',lastAt=0;
+function norm(s=''){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9ñü\s]/gi,' ').replace(/\s+/g,' ').trim()}
+function toks(s){return [...new Set(norm(s).split(' ').filter(w=>w.length>2))]}
+function score(a,b){const A=toks(a),B=toks(b);if(!A.length||!B.length)return 0;const sb=new Set(B),i=A.filter(x=>sb.has(x)).length;return Math.max(i/Math.min(A.length,B.length),i/new Set([...A,...B]).size)}
+function usefulLines(text=''){
+ return String(text).split(/?
+/)
+  .map(line=>line.replace(/s+/g,' ').trim())
+  .filter(line=>toks(line).length>=3);
+}
+function storedCandidates(text=''){
+ const lines=usefulLines(text);
+ const words=norm(text).split(' ').filter(Boolean);
+ const windows=[];
+ for(let size=4;size<=12;size++){
+  for(let i=0;i+size<=words.length;i++)windows.push(words.slice(i,i+size).join(' '));
+ }
+ return [...lines,...windows];
+}
+function bestLineMatch(scannedText){
+ const scanned=usefulLines(scannedText);
+ let best=null;
+ for(const r of RECORDS){
+  const candidates=storedCandidates(r.text);
+  for(const line of scanned){
+   const nl=norm(line);
+   const lineWords=toks(line).length;
+   if(lineWords<3)continue;
+   for(const candidate of candidates){
+    const nc=norm(candidate);
+    let s=score(line,candidate);
+    if(nl.length>=18&&(nc.includes(nl)||nl.includes(nc)))s=Math.max(s,.98);
+    if(!best||s>best.s)best={r,s,line,candidate};
+   }
+  }
+ }
+ return best;
+}
+function st(m,t=''){const e=$('rstatus');e.textContent=m;e.className='status show '+t}
+function pg(v){const e=$('rprog');e.style.display=v==null?'none':'block';e.firstElementChild.style.width=(v||0)+'%'}
+function stop(){if(stream)stream.getTracks().forEach(x=>x.stop());stream=null;$('rv').srcObject=null}
+async function start(){
+ stop();
+ if(!window.isSecureContext&&location.hostname!=='localhost')throw new Error('La cámara requiere HTTPS.');
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('Este navegador no permite usar la cámara.');
+ const tries=[{video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false},{video:{facingMode:{ideal:'environment'}},audio:false},{video:true,audio:false}];
+ let er;
+ for(const c of tries){try{stream=await navigator.mediaDevices.getUserMedia(c);$('rv').srcObject=stream;await $('rv').play();return}catch(e){er=e;stop()}}
+ throw er||new Error('No se pudo activar la cámara.');
+}
+function frame(){const v=$('rv'),c=$('rc'),w=v.videoWidth,h=v.videoHeight;if(!w)throw new Error('La cámara aún no está preparada.');const sx=w*.08,sy=h*.08,sw=w*.84,sh=h*.84,sc=Math.min(1.5,1600/sw);c.width=Math.round(sw*sc);c.height=Math.round(sh*sc);const x=c.getContext('2d');x.drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);return c}
+async function ensureOCR(){if(window.Tesseract)return;await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=ok;s.onerror=()=>no(new Error('No se pudo cargar el motor OCR.'));document.head.appendChild(s)})}
+async function ocr(){if(busy)return;busy=true;try{await ensureOCR();const r=await Tesseract.recognize(frame(),'spa+eng',{logger:m=>{if(m.status==='recognizing text'){const p=Math.round((m.progress||0)*100);pg(p);st('Reconociendo… '+p+'%')}}});const text=(r.data.text||'').replace(/\r/g,'').replace(/\n{3,}/g,'\n\n').trim();$('detected').value=text;match(text)}catch(e){st(e.message||'Error de reconocimiento','error')}finally{busy=false;setTimeout(()=>pg(null),300)}}
+function match(text){
+ const b=bestLineMatch(text),box=$('result');
+ if(!b||b.s<.58){
+  box.className='result';
+  box.innerHTML='<div>No se encontró ninguna línea con coincidencia suficiente.</div>';
+  return;
+ }
+ box.className='result ok';
+ const shown=b.line.replace(/s+/g,' ').trim();
+ box.innerHTML='<div><h3>Línea coincidente</h3><p>'+shown.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))+'</p><p>Abriendo automáticamente la URL…</p></div>';
+ const now=Date.now();
+ if(b.r.url!==last||now-lastAt>10000){
+  last=b.r.url;lastAt=now;
+  setTimeout(()=>location.href=b.r.url,600);
+ }
+}
+$('rs').onclick=async()=>{try{await start();$('rs').disabled=true;$('scan').disabled=false;$('auto').disabled=false;$('rst').disabled=false;st('Cámara activada.','ok')}catch(e){st(e.message||'No se pudo activar la cámara.','error')}};
+$('scan').onclick=ocr;
+$('auto').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('auto').textContent='Escaneo automático: desactivado'}else{timer=setInterval(()=>{if(!busy)ocr()},5000);$('auto').textContent='Escaneo automático: activado';ocr()}};
+$('rst').onclick=()=>{if(timer)clearInterval(timer);timer=null;stop();$('rs').disabled=false;$('scan').disabled=true;$('auto').disabled=true;$('rst').disabled=true;st('Cámara detenida.')};
+window.addEventListener('beforeunload',stop);
+</script></body></html>
