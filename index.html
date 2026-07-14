@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gestor de textos y URL</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#667085;--blue:#2563eb;--line:#d8e0ec;--danger:#b91c1c;--ok:#166534}
+*{box-sizing:border-box}html,body{margin:0;width:100%;min-height:100%;overflow-x:hidden}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(135deg,#163a70,#2563eb);color:white;padding:calc(14px + env(safe-area-inset-top)) 14px 14px}header>div{max-width:1400px;margin:auto}h1{font-size:clamp(1.25rem,3vw,2rem);margin:0}.sub{opacity:.9;margin-top:5px}
+main{max-width:1400px;margin:auto;padding:14px}.grid{display:grid;grid-template-columns:minmax(300px,.9fr) minmax(360px,1.1fr);gap:14px;align-items:start}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.07)}h2{margin-top:0;font-size:1.2rem}
+.videoBox{position:relative;width:100%;aspect-ratio:4/3;background:#111827;border-radius:14px;overflow:hidden}.videoBox video{width:100%;height:100%;object-fit:cover}.frame{position:absolute;inset:8%;border:3px dashed rgba(255,255,255,.9);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.12);pointer-events:none}.hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;padding:5px 9px;border-radius:999px;font-size:.78rem;white-space:nowrap}
+.controls,.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.toolbar{margin-bottom:10px}button,.button{border:0;border-radius:11px;padding:10px 13px;font-weight:750;font-size:.94rem;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e7eefc;color:#1e40af}.neutral{background:#eef2f7;color:#344054}.success{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button:disabled{opacity:.5;cursor:not-allowed}
+label{display:block;font-weight:750;margin:12px 0 6px}textarea,input{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:11px;padding:10px 11px;font:inherit;font-size:16px;background:white;color:var(--ink)}textarea{min-height:150px;resize:vertical}.grow{flex:1 1 220px}
+.status{display:none;margin-top:10px;padding:10px;border-radius:10px;background:#eef2ff;color:#3730a3}.status.show{display:block}.status.ok{background:#dcfce7;color:#166534}.status.error{background:#fee2e2;color:#991b1b}.progress{display:none;height:9px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:8px}.progress span{display:block;height:100%;width:0;background:var(--blue)}
+.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;min-width:700px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f8fafc}.textCell{white-space:pre-wrap;max-width:420px}.url{word-break:break-all}.actions{display:flex;gap:6px;flex-wrap:wrap}.actions button{padding:7px 9px;font-size:.82rem}.empty{text-align:center;color:var(--muted);padding:25px}.count{font-size:.85rem;background:#eef2ff;color:#3730a3;padding:5px 8px;border-radius:999px}.generate{margin-top:14px;padding:13px;border:2px dashed #93c5fd;border-radius:13px;background:#eff6ff}.help{font-size:.86rem;color:var(--muted);line-height:1.45}.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:12px;z-index:30}.modal.show{display:flex}.modalBox{background:white;width:min(680px,100%);border-radius:15px;padding:16px}.modalActions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}canvas{display:none}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){main{padding:8px}.card{padding:10px;border-radius:12px;margin-bottom:9px}.grid{display:block}.videoBox{aspect-ratio:3/4}.controls,.toolbar{display:grid;grid-template-columns:1fr}.controls button,.toolbar button,.toolbar .button{width:100%;min-height:44px}.grow{width:100%}.tableWrap{border:0;overflow:visible}table,thead,tbody,tr,th,td{display:block;width:100%}table{min-width:0}thead{display:none}tbody{display:grid;gap:8px}tr{border:1px solid var(--line);border-radius:11px;padding:9px;background:#fff}td{border:0;padding:5px 0;max-width:none}.actions{display:grid;grid-template-columns:1fr 1fr}.actions button{min-height:40px}}
+</style>
+</head>
+<body>
+<header><div><h1>Gestor de textos y URL</h1><div class="sub">Captura textos completos, asígnales una URL y genera una app lectora.</div></div></header>
+<main><div class="grid">
+<section class="card"><h2>Captura de texto</h2>
+<div class="videoBox"><video id="video" autoplay muted playsinline webkit-playsinline></video><div class="frame"></div><div class="hint">Sitúa el texto dentro del recuadro</div></div><canvas id="canvas"></canvas>
+<div class="controls"><button id="startCam" class="primary">Activar cámara</button><button id="capture" class="secondary" disabled>Capturar texto</button><button id="stopCam" class="neutral" disabled>Detener cámara</button></div>
+<div id="status" class="status"></div><div id="progress" class="progress"><span></span></div>
+<label for="text">Texto reconocido</label><textarea id="text" placeholder="Aquí aparecerá el texto reconocido. Puedes corregirlo antes de guardarlo."></textarea>
+<label for="url">URL asociada</label><input id="url" type="url" placeholder="https://ejemplo.com">
+<div class="controls"><button id="save" class="success">Guardar</button><button id="clearForm" class="neutral">Limpiar</button></div>
+<p class="help">La cámara requiere HTTPS o localhost. El OCR necesita conexión para cargar Tesseract.js.</p></section>
+<section class="card"><h2>Base de datos <span id="count" class="count">0 registros</span></h2>
+<div class="toolbar"><input id="search" class="grow" type="search" placeholder="Buscar"><button id="exportCsv" class="secondary">Exportar CSV</button><label class="button secondary" for="importCsv">Importar CSV</label><input id="importCsv" type="file" accept=".csv,text/csv" hidden><button id="clearAll" class="danger">Borrar todo</button></div>
+<div class="tableWrap"><table><thead><tr><th>#</th><th>Texto</th><th>URL</th><th>Acciones</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="generate"><h3>Generar app lectora</h3><p class="help">La app generada incluirá los textos y URL, escaneará bloques completos y abrirá automáticamente la URL asociada.</p><button id="generate" class="primary">Generar app lectora autónoma</button></div>
+</section></div></main>
+<div id="modal" class="modal"><div class="modalBox"><h2>Editar registro</h2><input id="editId" type="hidden"><label>Texto</label><textarea id="editText"></textarea><label>URL</label><input id="editUrl" type="url"><div class="modalActions"><button id="cancelEdit" class="neutral">Cancelar</button><button id="saveEdit" class="primary">Guardar cambios</button></div></div></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id),KEY='text_url_manager_v4';let records=load(),stream=null,busy=false;
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return[]}}
+function persist(){localStorage.setItem(KEY,JSON.stringify(records));render()}
+function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function norm(s=''){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim()}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function validUrl(v){try{return ['http:','https:'].includes(new URL(v).protocol)}catch{return false}}
+function status(msg,type=''){const e=$('status');e.textContent=msg;e.className='status show '+type}
+function prog(v){const e=$('progress');e.style.display=v==null?'none':'block';e.firstElementChild.style.width=(v||0)+'%'}
+function stopCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null}
+async function startCamera(){stopCamera();if(!window.isSecureContext&&location.hostname!=='localhost')throw new Error('La cámara requiere HTTPS.');if(!navigator.mediaDevices?.getUserMedia)throw new Error('Este navegador no permite usar la cámara.');const tries=[{video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false},{video:{facingMode:'environment'},audio:false},{video:true,audio:false}];let err;for(const c of tries){try{stream=await navigator.mediaDevices.getUserMedia(c);const v=$('video');v.srcObject=stream;await new Promise((ok,no)=>{if(v.readyState>=1)return ok();const t=setTimeout(()=>no(new Error('La cámara tarda demasiado.')),8000);v.addEventListener('loadedmetadata',()=>{clearTimeout(t);ok()},{once:true})});try{await v.play()}catch{}return}catch(e){err=e;stopCamera()}}if(err?.name==='NotAllowedError')throw new Error('Permiso de cámara denegado.');if(err?.name==='NotReadableError')throw new Error('La cámara está siendo usada por otra aplicación.');throw new Error(err?.message||'No se pudo activar la cámara.')}
+function captureCanvas(){const v=$('video'),c=$('canvas');if(!v.videoWidth)throw new Error('La cámara aún no está preparada.');const w=v.videoWidth,h=v.videoHeight,sx=w*.08,sy=h*.08,sw=w*.84,sh=h*.84,scale=Math.min(1.5,1600/sw);c.width=Math.round(sw*scale);c.height=Math.round(sh*scale);const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);const im=x.getImageData(0,0,c.width,c.height),d=im.data;for(let i=0;i<d.length;i+=4){const g=.299*d[i]+.587*d[i+1]+.114*d[i+2],val=Math.max(0,Math.min(255,(g-128)*1.25+128));d[i]=d[i+1]=d[i+2]=val}x.putImageData(im,0,0);return c}
+async function ensureOCR(){if(window.Tesseract)return;await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=ok;s.onerror=()=>no(new Error('No se pudo cargar el OCR.'));document.head.appendChild(s)})}
+async function recognize(){if(busy)throw new Error('Ya hay un reconocimiento en curso.');busy=true;try{await ensureOCR();const r=await Tesseract.recognize(captureCanvas(),'spa+eng',{logger:m=>{if(m.status==='recognizing text'){const p=Math.round((m.progress||0)*100);prog(p);status('Reconociendo texto… '+p+'%')}else status('Preparando OCR…')}});return (r.data.text||'').replace(/\r/g,'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim()}finally{busy=false;setTimeout(()=>prog(null),400)}}
+function render(){const q=norm($('search').value),list=records.filter(r=>!q||norm(r.text+' '+r.url).includes(q));$('count').textContent=records.length+' '+(records.length===1?'registro':'registros');$('rows').innerHTML=list.length?list.map((r,i)=>`<tr><td>${i+1}</td><td class="textCell">${esc(r.text)}</td><td><a class="url" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a></td><td><div class="actions"><button class="secondary" data-edit="${r.id}">Editar</button><button class="danger" data-del="${r.id}">Borrar</button></div></td></tr>`).join(''):'<tr><td colspan="4" class="empty">No hay registros.</td></tr>'}
+function csvEscape(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+function download(content,name,type){const b=new Blob([content],{type}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+function parseCsv(s){const rows=[];let row=[],cell='',q=false;for(let i=0;i<s.length;i++){const c=s[i],n=s[i+1];if(c==='"'&&q&&n==='"'){cell+='"';i++}else if(c==='"')q=!q;else if((c===';'||c===',')&&!q){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&n==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=''}else cell+=c}row.push(cell);if(row.some(x=>x.trim()))rows.push(row);return rows}
+function readerHtml(data){
+  const css=document.querySelector('style').textContent;
+  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  const parts=[];
+  parts.push('<!doctype html><html lang="es"><head><meta charset="utf-8">');
+  parts.push('<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">');
+  parts.push('<title>Lector de textos y URL</title><style>');
+  parts.push(css);
+  parts.push('.readerGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.result{min-height:180px;border:2px dashed #cbd5e1;border-radius:13px;padding:15px;display:flex;align-items:center;justify-content:center;text-align:center}.result.ok{background:#f0fdf4;border-color:#22c55e}@media(max-width:800px){.readerGrid{grid-template-columns:1fr}}</style></head><body>');
+  parts.push('<header><div><h1>Lector de textos y URL</h1><div class="sub">Enfoca cualquier texto guardado. La URL se abrirá automáticamente.</div></div></header>');
+  parts.push('<main><div class="readerGrid"><section class="card"><div class="videoBox"><video id="rv" autoplay muted playsinline webkit-playsinline></video><div class="frame"></div><div class="hint">Sitúa el texto dentro del recuadro</div></div><canvas id="rc"></canvas>');
+  parts.push('<div class="controls"><button id="rs" class="primary">Activar cámara</button><button id="scan" class="secondary" disabled>Escanear</button><button id="auto" class="neutral" disabled>Escaneo automático: desactivado</button><button id="rst" class="neutral" disabled>Detener cámara</button></div>');
+  parts.push('<div id="rstatus" class="status"></div><div id="rprog" class="progress"><span></span></div><label>Texto detectado</label><textarea id="detected" readonly></textarea></section>');
+  parts.push('<section class="card"><h2>Resultado</h2><div id="result" class="result"><div>Activa la cámara y enfoca un texto.</div></div></section></div></main>');
+  parts.push('<scr'+'ipt>');
+  parts.push("'use strict';");
+  parts.push("const RECORDS=JSON.parse(decodeURIComponent(escape(atob('"+encoded+"'))));");
+  parts.push(`
+const $=id=>document.getElementById(id);
+let stream=null,busy=false,timer=null,last='',lastAt=0;
+function norm(s=''){return String(s).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9ñü\\s]/gi,' ').replace(/\\s+/g,' ').trim()}
+function toks(s){return [...new Set(norm(s).split(' ').filter(w=>w.length>2))]}
+function score(a,b){const A=toks(a),B=toks(b);if(!A.length||!B.length)return 0;const sb=new Set(B),i=A.filter(x=>sb.has(x)).length;return Math.max(i/Math.min(A.length,B.length),i/new Set([...A,...B]).size)}
+function best(t){let z=null;for(const r of RECORDS){const s=score(t,r.text);if(!z||s>z.s)z={r,s}}return z}
+function st(m,t=''){const e=$('rstatus');e.textContent=m;e.className='status show '+t}
+function pg(v){const e=$('rprog');e.style.display=v==null?'none':'block';e.firstElementChild.style.width=(v||0)+'%'}
+function stop(){if(stream)stream.getTracks().forEach(x=>x.stop());stream=null;$('rv').srcObject=null}
+async function start(){
+ stop();
+ if(!window.isSecureContext&&location.hostname!=='localhost')throw new Error('La cámara requiere HTTPS.');
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('Este navegador no permite usar la cámara.');
+ const tries=[{video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false},{video:{facingMode:{ideal:'environment'}},audio:false},{video:true,audio:false}];
+ let er;
+ for(const c of tries){try{stream=await navigator.mediaDevices.getUserMedia(c);$('rv').srcObject=stream;await $('rv').play();return}catch(e){er=e;stop()}}
+ throw er||new Error('No se pudo activar la cámara.');
+}
+function frame(){const v=$('rv'),c=$('rc'),w=v.videoWidth,h=v.videoHeight;if(!w)throw new Error('La cámara aún no está preparada.');const sx=w*.08,sy=h*.08,sw=w*.84,sh=h*.84,sc=Math.min(1.5,1600/sw);c.width=Math.round(sw*sc);c.height=Math.round(sh*sc);const x=c.getContext('2d');x.drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);return c}
+async function ensureOCR(){if(window.Tesseract)return;await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=ok;s.onerror=()=>no(new Error('No se pudo cargar el motor OCR.'));document.head.appendChild(s)})}
+async function ocr(){if(busy)return;busy=true;try{await ensureOCR();const r=await Tesseract.recognize(frame(),'spa+eng',{logger:m=>{if(m.status==='recognizing text'){const p=Math.round((m.progress||0)*100);pg(p);st('Reconociendo… '+p+'%')}}});const text=(r.data.text||'').replace(/\\r/g,'').replace(/\\n{3,}/g,'\\n\\n').trim();$('detected').value=text;match(text)}catch(e){st(e.message||'Error de reconocimiento','error')}finally{busy=false;setTimeout(()=>pg(null),300)}}
+function match(text){const b=best(text),box=$('result');if(!b||b.s<.32){box.className='result';box.innerHTML='<div>No se encontró una coincidencia suficiente.</div>';return}box.className='result ok';box.innerHTML='<div><h3>Coincidencia encontrada</h3><p>Abriendo automáticamente la URL…</p></div>';const now=Date.now();if(b.r.url!==last||now-lastAt>10000){last=b.r.url;lastAt=now;setTimeout(()=>location.href=b.r.url,600)}}
+$('rs').onclick=async()=>{try{await start();$('rs').disabled=true;$('scan').disabled=false;$('auto').disabled=false;$('rst').disabled=false;st('Cámara activada.','ok')}catch(e){st(e.message||'No se pudo activar la cámara.','error')}};
+$('scan').onclick=ocr;
+$('auto').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('auto').textContent='Escaneo automático: desactivado'}else{timer=setInterval(()=>{if(!busy)ocr()},5000);$('auto').textContent='Escaneo automático: activado';ocr()}};
+$('rst').onclick=()=>{if(timer)clearInterval(timer);timer=null;stop();$('rs').disabled=false;$('scan').disabled=true;$('auto').disabled=true;$('rst').disabled=true;st('Cámara detenida.')};
+window.addEventListener('beforeunload',stop);
+`);
+  parts.push('</scr'+'ipt></body></html>');
+  return parts.join('');
+}
+$('startCam').onclick=async()=>{try{await startCamera();$('startCam').disabled=true;$('capture').disabled=false;$('stopCam').disabled=false;status('Cámara activada.','ok')}catch(e){status(e.message,'error')}};$('stopCam').onclick=()=>{stopCamera();$('startCam').disabled=false;$('capture').disabled=true;$('stopCam').disabled=true;status('Cámara detenida.')};$('capture').onclick=async()=>{try{const t=await recognize();$('text').value=t;status(t?'Texto reconocido. Revísalo antes de guardar.':'No se detectó texto.',t?'ok':'error')}catch(e){status(e.message,'error')}};$('save').onclick=()=>{const text=$('text').value.trim(),url=$('url').value.trim();if(!text)return status('Introduce o captura un texto.','error');if(!validUrl(url))return status('Introduce una URL válida.','error');records.push({id:uid(),text,url});persist();$('text').value='';$('url').value='';status('Registro guardado.','ok')};$('clearForm').onclick=()=>{$('text').value='';$('url').value=''};$('search').oninput=render;$('rows').onclick=e=>{const edit=e.target.dataset.edit,del=e.target.dataset.del;if(edit){const r=records.find(x=>x.id===edit);$('editId').value=r.id;$('editText').value=r.text;$('editUrl').value=r.url;$('modal').classList.add('show')}if(del&&confirm('¿Borrar este registro?')){records=records.filter(x=>x.id!==del);persist()}};$('cancelEdit').onclick=()=>$('modal').classList.remove('show');$('saveEdit').onclick=()=>{const r=records.find(x=>x.id===$('editId').value),text=$('editText').value.trim(),url=$('editUrl').value.trim();if(!r||!text||!validUrl(url))return alert('Revisa el texto y la URL.');r.text=text;r.url=url;persist();$('modal').classList.remove('show')};$('exportCsv').onclick=()=>{if(!records.length)return alert('No hay registros.');const csv='\uFEFF'+[['texto','url'],...records.map(r=>[r.text,r.url])].map(r=>r.map(csvEscape).join(';')).join('\r\n');download(csv,'base_textos_urls.csv','text/csv;charset=utf-8')};$('importCsv').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const rows=parseCsv((await f.text()).replace(/^\uFEFF/,'')),h=rows[0].map(norm),ti=h.indexOf('texto'),ui=h.indexOf('url');if(ti<0||ui<0)throw new Error('Faltan las columnas texto y url.');const imp=rows.slice(1).map(r=>({id:uid(),text:(r[ti]||'').trim(),url:(r[ui]||'').trim()})).filter(r=>r.text&&validUrl(r.url));records=confirm('Aceptar: sustituir. Cancelar: añadir.')?imp:[...records,...imp];persist()}catch(err){alert(err.message)}e.target.value=''};$('clearAll').onclick=()=>{if(records.length&&confirm('¿Borrar todos los registros?')){records=[];persist()}};$('generate').onclick=()=>{if(!records.length)return alert('Guarda al menos un registro.');download(readerHtml(records),'app_lectora_textos_urls.html','text/html;charset=utf-8')};window.addEventListener('beforeunload',stopCamera);render();
+</script>
+</body></html>
